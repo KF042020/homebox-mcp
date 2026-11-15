@@ -4,7 +4,8 @@ description: "Homebox MCP with native Home Assistant discovery for OpenAI and Ge
 version: "0.7.2"
 slug: "homebox-mcp"
 url: "https://github.com/KF042020/homebox-mcp"
-# Pull prebuilt images from GHCR; Supervisor will not build on the Home Assistant host.
+# Pull the prebuilt multi-architecture GHCR manifest published by GitHub Actions.
+# Supervisor downloads the matching image; it never builds this add-on on the HA host.
 image: ghcr.io/kf042020/homebox-mcp
 init: false
 arch:

@@ -1,9 +1,9 @@
 ---
 name: "Homebox MCP Server"
-description: "MCP Server to manage Homebox inventory via AI"
-version: "0.7.1"
+description: "Homebox MCP with native Home Assistant discovery for OpenAI and Gemini"
+version: "0.7.2"
 slug: "homebox-mcp"
-url: "https://github.com/beausmith/homebox-mcp"
+url: "https://github.com/KF042020/homebox-mcp"
 init: false
 arch:
   - amd64
@@ -14,6 +14,10 @@ ports_description:
   8099/tcp: "MCP Server SSE endpoint"
 ingress: true
 ingress_stream: true
+# Allow the add-on to register its MCP endpoint with Home Assistant via Supervisor.
+hassio_api: true
+discovery:
+  - mcp
 panel_icon: "mdi:package-variant-closed"
 panel_title: "Homebox MCP"
 options:

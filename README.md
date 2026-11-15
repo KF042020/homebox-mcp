@@ -91,8 +91,8 @@ Cloudflare. If you only use Claude Desktop or Claude Code from your LAN, you can
 <summary>Manual install</summary>
 
 1. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, add `https://github.com/KF042020/homebox-mcp`
-2. Find **Homebox MCP Server** in the store and click **Install**. Supervisor builds the image
-   locally; this takes a minute or two.
+2. Find **Homebox MCP Server** in the store and click **Install**. Supervisor downloads the
+   prebuilt multi-architecture image from GHCR; no build runs on your Home Assistant host.
 
 </details>
 
@@ -105,15 +105,15 @@ gives you an easy rollback path.
 
 ### GHCR package visibility
 
-The first successful publish creates these packages:
+The workflow follows the same pattern as the Homebox add-on fork: GitHub Actions builds
+`amd64` and `aarch64` images, then publishes one multi-architecture manifest as
+`ghcr.io/kf042020/homebox-mcp:0.7.2`. The add-on configuration points to the manifest, so
+Supervisor automatically pulls the correct architecture.
 
-- [homebox-mcp-amd64](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp-amd64)
-- [homebox-mcp-aarch64](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp-aarch64)
-
-GitHub Container Registry packages may start as **Private**. After the first successful Actions
-publish, open each package → **Package settings** → **Change visibility** → **Public**. The
-Home Assistant host must be able to pull the images anonymously; do not put any registry password
-or GitHub token into the add-on configuration.
+After the first successful publish, make the single
+[GHCR package](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp) **Public**:
+open **Package settings → Change visibility → Public**. Home Assistant can then pull it
+anonymously. No registry password or GitHub token belongs in the add-on configuration.
 
 ## 2. Configure it
 

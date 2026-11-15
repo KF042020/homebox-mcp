@@ -79,16 +79,16 @@ When you enable `mcp_auth_enabled: true`, you need to generate and configure a s
 ## Native Home Assistant MCP integration (Core 2026.10+)
 
 This add-on can register itself with Home Assistant's built-in MCP integration through the
-Supervisor discovery API. For this feature:
+Supervisor discovery API. For this feature, Home Assistant Core must be **2026.10 or newer**.
 
-- Home Assistant Core must be **2026.10 or newer**.
-- `mcp_auth_enabled` must be `true`.
-- `mcp_auth_token` must contain the same configured Bearer token used by MCP clients.
-
-The add-on requests Supervisor API access only to announce its MCP endpoint. Supervisor sends
-the endpoint URL and Bearer token to Home Assistant's discovery flow; the token is not placed in
-the URL and is not written to the add-on log. No internet-exposed endpoint or Cloudflare Tunnel
-is required when the AI agent runs inside Home Assistant.
+Core's app-discovery flow accepts the MCP endpoint URL but does not accept a static Bearer token.
+The add-on therefore creates a 256-bit random secret path and stores it persistently under `/data`.
+Supervisor receives this dedicated URL without a token field. Requests to that URL are routed to
+the Streamable HTTP MCP endpoint and authenticated by possession of the unguessable path. The
+regular `/mcp` and `/sse` endpoints continue to use `mcp_auth_enabled` and `mcp_auth_token`
+as configured. Keep Bearer authentication enabled when exposing the regular endpoint to external
+clients. No internet-exposed endpoint or Cloudflare Tunnel is required when the AI agent runs
+inside Home Assistant.
 
 After starting or restarting the add-on, open **Settings → Devices & services** and accept the
 discovered **Homebox Inventory** MCP server. Then configure the conversation agent:
@@ -98,8 +98,8 @@ discovered **Homebox Inventory** MCP server. Then configure the conversation age
 3. Save the configuration. The agent can now use the Homebox MCP tools.
 4. To use it by voice, select that agent in the Assist pipeline assigned to your voice satellite.
 
-If discovery does not appear, check the Core version and both authentication options, then restart
-the add-on to send the announcement again.
+If discovery does not appear, check the Core version and that Supervisor API access is enabled
+for the add-on, then restart the add-on to send the announcement again.
 
 ### Manual Setup (Optional)
 

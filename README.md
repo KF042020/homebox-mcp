@@ -108,7 +108,7 @@ gives you an easy rollback path.
 
 The workflow follows the same pattern as the Homebox add-on fork: GitHub Actions builds
 `amd64` and `aarch64` images, then publishes one multi-architecture manifest as
-`ghcr.io/kf042020/homebox-mcp:0.7.2`. The add-on configuration points to the manifest, so
+`ghcr.io/kf042020/homebox-mcp:0.7.3`. The add-on configuration points to the manifest, so
 Supervisor automatically pulls the correct architecture.
 
 After the first successful publish, make the single

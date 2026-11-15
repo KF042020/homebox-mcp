@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-11-15
+
+### Added
+
+- Native Home Assistant MCP discovery for Core 2026.10+: the add-on announces its internal
+  Streamable HTTP endpoint to Supervisor and securely hands the configured Bearer token to the
+  built-in MCP integration. This enables Home Assistant conversation agents such as OpenAI
+  Conversation and Google Gemini to use Homebox tools without an internet-facing tunnel.
+- Supervisor API access is limited to the add-on's discovery announcement; it does not need
+  manager-level privileges.
+
+### Security
+
+- Stop writing any part of the MCP Authorization header to the add-on log.
+
+### Documentation
+
+- Document native MCP discovery, Bearer-token prerequisites, and selecting the Homebox API in
+  OpenAI Conversation / Google Gemini agent settings.
+
 ## [0.7.1] - 2026-10-16
 
 ### Changed

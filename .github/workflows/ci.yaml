@@ -2,13 +2,16 @@
 name: CI
 
 on:
-  push:
+  workflow_call:
   pull_request:
     types:
       - opened
       - reopened
       - synchronize
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   lint-addon:

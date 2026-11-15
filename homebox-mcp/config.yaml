@@ -1,7 +1,7 @@
 ---
 name: "Homebox MCP Server"
 description: "Homebox MCP with native Home Assistant discovery for OpenAI and Gemini"
-version: "0.7.2"
+version: "0.7.3"
 slug: "homebox-mcp"
 url: "https://github.com/KF042020/homebox-mcp"
 # Pull the prebuilt multi-architecture GHCR manifest published by GitHub Actions.

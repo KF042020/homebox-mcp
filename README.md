@@ -81,7 +81,7 @@ Cloudflare. If you only use Claude Desktop or Claude Code from your LAN, you can
 
 ## 1. Install the add-on
 
-[![Open the Homebox MCP Server add-on page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=homebox-mcp&repository_url=https%3A%2F%2Fgithub.com%2FKF042020%2Fhomebox-mcp)
+[![Open the Homebox MCP Server add-on page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=140cc115_homebox-mcp&repository_url=https%3A%2F%2Fgithub.com%2FKF042020%2Fhomebox-mcp)
 
 <details>
 <summary>Manual install</summary>
@@ -92,9 +92,12 @@ Cloudflare. If you only use Claude Desktop or Claude Code from your LAN, you can
 
 </details>
 
-If you previously installed the upstream `oangelo/homebox-mcp` add-on, uninstall it first; both
-use the slug `homebox-mcp` and Home Assistant will not run two. Copy its `homebox_token` out of its
-configuration before you remove it.
+If you already run `beausmith/homebox-mcp`, you can install this fork alongside it:
+Home Assistant assigns a different full app ID to each repository. Copy the five settings from the
+existing add-on (`homebox_url`, `homebox_token`, `mcp_auth_enabled`, `mcp_auth_token`, and
+`log_level`) into this one. Then **stop** the beausmith add-on before starting this one, because
+both use host port 8099. Keep the old add-on installed until the new one has passed its tests; this
+gives you an easy rollback path.
 
 ## 2. Configure it
 
@@ -188,7 +191,7 @@ What does work, with no inbound port forward and without exposing Home Assistant
    external_hostname: ""
    additional_hosts:
      - hostname: homebox-mcp.yourdomain.com
-       service: http://ee45feb1-homebox-mcp:8099
+       service: http://140cc115-homebox-mcp:8099
    ```
 
 3. Start the add-on and open its **Log**. It prints a `https://dash.cloudflare.com/argotunnel?...`

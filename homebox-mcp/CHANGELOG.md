@@ -5,14 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-11-15
+
+### Fixed
+
+- Correct Home Assistant Core 2026.10 MCP app discovery authentication. Core's discovery flow
+  accepts the endpoint URL but does not consume a static Bearer token from the Supervisor
+  discovery payload. The add-on now creates a persistent 256-bit random secret path under
+  `/data` and announces that URL without a token. Requests to that dedicated path are routed
+  to the Streamable HTTP MCP endpoint and authenticated by possession of the unguessable path.
+  The regular `/mcp` and `/sse` endpoints retain their configured Bearer authentication.
+
 ## [0.7.2] - 2026-11-15
 
 ### Added
 
 - Native Home Assistant MCP discovery for Core 2026.10+: the add-on announces its internal
-  Streamable HTTP endpoint to Supervisor and securely hands the configured Bearer token to the
-  built-in MCP integration. This enables Home Assistant conversation agents such as OpenAI
-  Conversation and Google Gemini to use Homebox tools without an internet-facing tunnel.
+  Streamable HTTP endpoint to Supervisor. This enables Home Assistant conversation agents such
+  as OpenAI Conversation and Google Gemini to use Homebox tools without an internet-facing tunnel.
 - Supervisor API access is limited to the add-on's discovery announcement; it does not need
   manager-level privileges.
 
@@ -22,8 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- Document native MCP discovery, Bearer-token prerequisites, and selecting the Homebox API in
-  OpenAI Conversation / Google Gemini agent settings.
+- Document native MCP discovery and selecting the Homebox API in OpenAI Conversation / Google
+  Gemini agent settings.
 
 ## [0.7.1] - 2026-10-16
 

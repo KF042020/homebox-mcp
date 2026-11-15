@@ -364,8 +364,9 @@ add-on's **Documentation** tab).
 - **The Homebox add-on's API key pepper** (`/data/api_key_pepper` in jscarrott/homebox-addon ≥
   2.2.1) must not be deleted; doing so invalidates every API token, including the one in this
   add-on's configuration.
-- **Docker build.** Supervisor builds the image on your machine at install time; the first install
-  takes a couple of minutes and the add-on page shows nothing until it finishes.
+- **Docker image.** The add-on now uses a prebuilt multi-architecture GHCR manifest. If
+  Supervisor reports an image pull or tag error, check that the `homebox-mcp` GHCR package is
+  Public and that the matching version tag has been published.
 
 ## Local development
 

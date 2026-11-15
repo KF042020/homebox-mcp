@@ -4,9 +4,11 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -21,6 +23,41 @@ import uvicorn
 from config import config
 from homebox_client import HomeboxClient
 from tools import register_tools
+
+
+MCP_DISCOVERY_SECRET_FILE = Path("/data/mcp_discovery_secret")
+MCP_DISCOVERY_PATH: str | None = None
+
+
+def get_mcp_discovery_path() -> str:
+    """Get or create the persistent unguessable URL path used by HA discovery."""
+    global MCP_DISCOVERY_PATH
+
+    if MCP_DISCOVERY_PATH is not None:
+        return MCP_DISCOVERY_PATH
+
+    MCP_DISCOVERY_SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        secret = MCP_DISCOVERY_SECRET_FILE.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        secret = secrets.token_urlsafe(32)
+        # Create atomically with owner-only permissions. /data persists across
+        # add-on upgrades and restarts, keeping the discovered URL stable.
+        descriptor = os.open(
+            MCP_DISCOVERY_SECRET_FILE,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as secret_file:
+            secret_file.write(secret)
+
+    if not secret or any(
+        not (character.isalnum() or character in "-_") for character in secret
+    ):
+        raise ValueError("Invalid MCP discovery secret stored in /data")
+
+    MCP_DISCOVERY_PATH = f"/mcp-discovery/{secret}"
+    return MCP_DISCOVERY_PATH
 
 
 class BearerAuthMiddleware:
@@ -46,6 +83,13 @@ class BearerAuthMiddleware:
 
         request = Request(scope, receive=receive)
         path = request.url.path
+
+        # Supervisor discovery uses a persistent, unguessable URL path as its
+        # credential. This is required by Core 2026.10, whose app-discovery
+        # flow accepts a URL but does not accept a static Bearer token.
+        if scope.get("mcp_discovery"):
+            await self.app(scope, receive, send)
+            return
 
         # Skip auth for dashboard pages (protected by HA auth) or when disabled.
         if path in ("/", "/api/status") or not config.mcp_auth_enabled:
@@ -696,18 +740,17 @@ async def announce_mcp_to_home_assistant() -> None:
     configured MCP Bearer token is handed to Core as an app-discovered API
     token, so the MCP endpoint remains protected and no public URL is needed.
     """
-    if not config.mcp_auth_enabled or not config.mcp_auth_token:
-        logger.info(
-            "Home Assistant MCP discovery skipped: enable MCP authentication "
-            "and configure a non-empty mcp_auth_token"
-        )
-        return
-
     supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
     if not supervisor_token:
         logger.info(
             "Home Assistant MCP discovery skipped: Supervisor API access is unavailable"
         )
+        return
+
+    try:
+        discovery_path = get_mcp_discovery_path()
+    except (OSError, ValueError) as error:
+        logger.warning("Home Assistant MCP discovery skipped: %s", error)
         return
 
     try:
@@ -749,15 +792,12 @@ async def announce_mcp_to_home_assistant() -> None:
                 )
                 return
 
-            endpoint = f"http://{hostname}:{config.server_port}{MCP_PATH}"
+            endpoint = f"http://{hostname}:{config.server_port}{discovery_path}"
             discovery_response = await supervisor.post(
                 "/discovery",
                 json={
                     "service": "mcp",
-                    "config": {
-                        "url": endpoint,
-                        "token": config.mcp_auth_token,
-                    },
+                    "config": {"url": endpoint},
                 },
             )
             discovery_response.raise_for_status()
@@ -774,6 +814,25 @@ async def announce_mcp_to_home_assistant() -> None:
         logger.warning("Home Assistant MCP discovery failed: %s", error)
 
 
+
+
+class MCPDiscoveryPathAlias:
+    """Rewrite the secret Home Assistant discovery URL onto the MCP endpoint."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and MCP_DISCOVERY_PATH is not None
+            and scope.get("path") == MCP_DISCOVERY_PATH
+        ):
+            scope = dict(scope)
+            scope["path"] = MCP_PATH
+            scope["raw_path"] = MCP_PATH.encode()
+            scope["mcp_discovery"] = True
+        await self.app(scope, receive, send)
 
 
 class LegacyPathAlias:
@@ -807,6 +866,7 @@ app = Starlette(
         Mount("/", app=mcp_app),
     ],
     middleware=[
+        Middleware(MCPDiscoveryPathAlias),
         Middleware(LegacyPathAlias),
         Middleware(BearerAuthMiddleware),
     ],

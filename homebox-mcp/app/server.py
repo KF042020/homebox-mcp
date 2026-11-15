@@ -3,10 +3,13 @@
 import asyncio
 import json
 import logging
+import os
 import sys
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
+import httpx
 from fastmcp import FastMCP
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -687,6 +690,93 @@ LEGACY_MCP_PATH = "/sse"
 mcp_app = mcp.http_app(transport="http", path=MCP_PATH)
 
 
+async def announce_mcp_to_home_assistant() -> None:
+    """Register this MCP server with Home Assistant through Supervisor discovery.
+
+    Home Assistant Core 2026.10+ accepts MCP add-on discovery messages. The
+    configured MCP Bearer token is handed to Core as an app-discovered API
+    token, so the MCP endpoint remains protected and no public URL is needed.
+    """
+    if not config.mcp_auth_enabled or not config.mcp_auth_token:
+        logger.info(
+            "Home Assistant MCP discovery skipped: enable MCP authentication "
+            "and configure a non-empty mcp_auth_token"
+        )
+        return
+
+    supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
+    if not supervisor_token:
+        logger.info(
+            "Home Assistant MCP discovery skipped: Supervisor API access is unavailable"
+        )
+        return
+
+    try:
+        async with httpx.AsyncClient(
+            base_url=os.environ.get("SUPERVISOR_BASE_URL", "http://supervisor"),
+            headers={"Authorization": f"Bearer {supervisor_token}"},
+            timeout=5.0,
+        ) as supervisor:
+            core_response = await supervisor.get("/core/info")
+            core_response.raise_for_status()
+            core_info = core_response.json().get("data") or {}
+            core_version = str(core_info.get("version", ""))
+            version_parts = core_version.split(".")
+            if (
+                len(version_parts) < 2
+                or not version_parts[0].isdigit()
+                or not version_parts[1].isdigit()
+            ):
+                logger.warning(
+                    "Home Assistant MCP discovery skipped: could not parse Core version"
+                )
+                return
+
+            if (int(version_parts[0]), int(version_parts[1])) < (2026, 10):
+                logger.info(
+                    "Home Assistant MCP discovery requires Core 2026.10 or newer "
+                    "(detected %s); skipping",
+                    core_version,
+                )
+                return
+
+            addon_response = await supervisor.get("/addons/self/info")
+            addon_response.raise_for_status()
+            addon_info = addon_response.json().get("data") or {}
+            hostname = addon_info.get("hostname")
+            if not hostname:
+                logger.warning(
+                    "Home Assistant MCP discovery skipped: Supervisor returned no add-on hostname"
+                )
+                return
+
+            endpoint = f"http://{hostname}:{config.server_port}{MCP_PATH}"
+            discovery_response = await supervisor.post(
+                "/discovery",
+                json={
+                    "service": "mcp",
+                    "config": {
+                        "url": endpoint,
+                        "token": config.mcp_auth_token,
+                    },
+                },
+            )
+            discovery_response.raise_for_status()
+            logger.info(
+                "Registered Homebox MCP with Home Assistant Core %s",
+                core_version,
+            )
+    except httpx.HTTPStatusError as error:
+        logger.warning(
+            "Home Assistant MCP discovery failed: Supervisor returned HTTP %s",
+            error.response.status_code,
+        )
+    except (httpx.HTTPError, ValueError, TypeError) as error:
+        logger.warning("Home Assistant MCP discovery failed: %s", error)
+
+
+
+
 class LegacyPathAlias:
     """Rewrite requests for the legacy `/sse` path onto the `/mcp` endpoint."""
 
@@ -701,7 +791,16 @@ class LegacyPathAlias:
         await self.app(scope, receive, send)
 
 
-# Create custom Starlette app with MCP mounted and auth middleware
+@asynccontextmanager
+async def app_lifespan(starlette_app):
+    """Preserve FastMCP's lifespan and register the server with Supervisor."""
+    async with mcp_app.lifespan(starlette_app):
+        await announce_mcp_to_home_assistant()
+        yield
+
+
+# Create custom Starlette app with MCP mounted and auth middleware.
+# Keep FastMCP's lifespan active so its Streamable HTTP session manager starts.
 app = Starlette(
     routes=[
         Route("/", homepage),
@@ -712,7 +811,7 @@ app = Starlette(
         Middleware(LegacyPathAlias),
         Middleware(BearerAuthMiddleware),
     ],
-    lifespan=mcp_app.lifespan,
+    lifespan=app_lifespan,
 )
 
 

@@ -29,6 +29,19 @@ OpenAI Conversation and Google Gemini, as well as external clients such as Claud
 
 *Required if `mcp_auth_enabled` is enabled
 
+## Prebuilt images (GHCR)
+
+This add-on uses prebuilt images from GitHub Container Registry. Home Assistant pulls the tag
+matching `version` in `homebox-mcp/config.yaml`; it does not build the image on the HA host.
+
+After the first successful GitHub Actions publish, open each package's **Package settings** and
+change its visibility to **Public** so Home Assistant can pull it without registry credentials:
+
+- [homebox-mcp-amd64](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp-amd64)
+- [homebox-mcp-aarch64](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp-aarch64)
+
+Do not add a GitHub token or registry password to the add-on configuration.
+
 ### Configuration Example
 
 ```yaml

@@ -1,51 +1,83 @@
 ---
-name: Deploy
+name: Publish Add-on Images
 
 on:
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - master
+    paths:
+      - "homebox-mcp/**"
+      - ".github/workflows/deploy.yaml"
   workflow_dispatch:
 
-jobs:
-  information:
-    name: Gather Information
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Get version from config.yaml
-        id: version
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=dev" >> $GITHUB_OUTPUT
-          fi
+permissions:
+  contents: read
+  packages: write
 
-  build:
-    name: Build ${{ matrix.arch }}
-    needs: information
+concurrency:
+  group: publish-homebox-mcp-images
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.arch }} image
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        arch: ["amd64", "aarch64"]
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build
-        uses: docker/build-push-action@v5
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read add-on version
+        id: metadata
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's/^version: "\\(.*\\)"/\\1/p' homebox-mcp/config.yaml)"
+          if [[ -z "$VERSION" ]]; then
+            echo "Could not read version from homebox-mcp/config.yaml" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
         with:
           context: ./homebox-mcp
-          push: false
+          platforms: ${{ matrix.platform }}
+          push: true
           tags: |
-            homebox-mcp/${{ matrix.arch }}:${{ needs.information.outputs.version }}
+            ghcr.io/kf042020/homebox-mcp-${{ matrix.arch }}:${{ steps.metadata.outputs.version }}
+            ghcr.io/kf042020/homebox-mcp-${{ matrix.arch }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/KF042020/homebox-mcp
+            org.opencontainers.image.description=Homebox MCP Server for Home Assistant
           build-args: |
             BUILD_ARCH=${{ matrix.arch }}
-            BUILD_VERSION=${{ needs.information.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            BUILD_DESCRIPTION=Homebox MCP with native Home Assistant MCP discovery
+            BUILD_NAME=Homebox MCP Server
+            BUILD_REF=${{ github.sha }}
+            BUILD_REPOSITORY=KF042020/homebox-mcp
+            BUILD_VERSION=${{ steps.metadata.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}

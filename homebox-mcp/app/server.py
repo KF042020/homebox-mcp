@@ -55,10 +55,9 @@ class BearerAuthMiddleware:
         # Check for Authorization header
         auth_header = request.headers.get("Authorization", "")
 
-        # Log headers for debugging (only on the MCP endpoint)
+        # Never log the Authorization header or any part of the bearer token.
         if path == MCP_PATH:
-            logger.info(f"Auth request to {path}")
-            logger.info(f"Authorization header: {auth_header[:50] if auth_header else 'MISSING'}...")
+            logger.info("Auth request to %s (Authorization header present: %s)", path, bool(auth_header))
 
         async def deny(content: str) -> None:
             response = Response(
@@ -619,7 +618,7 @@ async def homepage(request):
 
         <footer>
             <p>
-                <a href="https://github.com/beausmith/homebox-mcp" target="_blank">GitHub</a> ·
+                <a href="https://github.com/KF042020/homebox-mcp" target="_blank">GitHub</a> ·
                 Designed for use with the <a href="https://github.com/Crafter-Y/homebox-addon" target="_blank">Homebox HA Addon</a>
             </p>
         </footer>
@@ -647,7 +646,7 @@ async def homepage(request):
                 return;
             }}
             navigator.clipboard.writeText(input.value).then(() => {{
-                alert('Token copied!\\n\\nNow paste in addon settings:\\n→ mcp_auth_token\\n\\nAnd also in Claude.ai:\\n→ OAuth Client Secret');
+                alert('Token copied!\\n\\nPaste it in add-on settings:\\n→ mcp_auth_token\\n\\nFor Home Assistant MCP discovery, keep mcp_auth_enabled enabled.');
             }});
         }}
     </script>

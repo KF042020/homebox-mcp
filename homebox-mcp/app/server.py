@@ -736,9 +736,10 @@ mcp_app = mcp.http_app(transport="http", path=MCP_PATH)
 async def announce_mcp_to_home_assistant() -> None:
     """Register this MCP server with Home Assistant through Supervisor discovery.
 
-    Home Assistant Core 2026.10+ accepts MCP add-on discovery messages. The
-    configured MCP Bearer token is handed to Core as an app-discovered API
-    token, so the MCP endpoint remains protected and no public URL is needed.
+    Home Assistant Core 2026.10+ accepts an MCP endpoint URL through app discovery.
+    Its discovery flow does not accept a static Bearer token, so this add-on uses
+    a persistent, unguessable URL path as the credential for the HA-only endpoint.
+    The regular /mcp endpoint keeps its configured Bearer authentication.
     """
     supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
     if not supervisor_token:

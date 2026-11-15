@@ -891,4 +891,7 @@ if __name__ == "__main__":
         host=config.server_host,
         port=config.server_port,
         log_level=config.log_level.lower(),
+        # The HA discovery URL contains a secret path. Uvicorn access logs use
+        # the original ASGI scope and would otherwise write that path verbatim.
+        access_log=False,
     )

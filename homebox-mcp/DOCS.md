@@ -4,9 +4,9 @@
 
 ## About
 
-This addon exposes an MCP (Model Context Protocol) server for managing
-Homebox inventory. It allows AI assistants (like Claude) to list,
-create, move, and search items in your home inventory.
+This add-on exposes an MCP (Model Context Protocol) server for managing Homebox inventory.
+It supports native Home Assistant discovery (Core 2026.10+) for conversation agents such as
+OpenAI Conversation and Google Gemini, as well as external clients such as Claude.
 
 ## Installation
 
@@ -47,7 +47,7 @@ log_level: "info"
 4. Click **Create Token**
 5. Copy the generated token
 
-## MCP Authentication (OAuth)
+## MCP Authentication (Bearer token)
 
 The addon supports optional Bearer token authentication to protect the MCP endpoint.
 
@@ -64,6 +64,31 @@ When you enable `mcp_auth_enabled: true`, you need to generate and configure a s
    - Configure `mcp_auth_token` in the addon settings
    - Enable `mcp_auth_enabled: true`
    - Restart the addon
+
+## Native Home Assistant MCP integration (Core 2026.10+)
+
+This add-on can register itself with Home Assistant's built-in MCP integration through the
+Supervisor discovery API. For this feature:
+
+- Home Assistant Core must be **2026.10 or newer**.
+- `mcp_auth_enabled` must be `true`.
+- `mcp_auth_token` must contain the same configured Bearer token used by MCP clients.
+
+The add-on requests Supervisor API access only to announce its MCP endpoint. Supervisor sends
+the endpoint URL and Bearer token to Home Assistant's discovery flow; the token is not placed in
+the URL and is not written to the add-on log. No internet-exposed endpoint or Cloudflare Tunnel
+is required when the AI agent runs inside Home Assistant.
+
+After starting or restarting the add-on, open **Settings → Devices & services** and accept the
+discovered **Homebox Inventory** MCP server. Then configure the conversation agent:
+
+1. Open the OpenAI Conversation or Google Gemini conversation-agent configuration.
+2. In the conversation settings, select **Homebox Inventory** in **Home Assistant API**.
+3. Save the configuration. The agent can now use the Homebox MCP tools.
+4. To use it by voice, select that agent in the Assist pipeline assigned to your voice satellite.
+
+If discovery does not appear, check the Core version and both authentication options, then restart
+the add-on to send the announcement again.
 
 ### Manual Setup (Optional)
 
@@ -382,4 +407,4 @@ ha addons logs homebox-mcp
 
 For issues or suggestions:
 
-- Open an issue on the [GitHub repository](https://github.com/beausmith/homebox-mcp)
+- Open an issue on the [GitHub repository](https://github.com/KF042020/homebox-mcp)

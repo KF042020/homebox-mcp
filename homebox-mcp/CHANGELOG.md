@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   discovery payload. The add-on now creates a persistent 256-bit random secret path under
   `/data` and announces that URL without a token. Requests to that dedicated path are routed
   to the Streamable HTTP MCP endpoint and authenticated by possession of the unguessable path.
+  Uvicorn access logging is disabled so requests cannot write the secret path to the add-on log.
   The regular `/mcp` and `/sse` endpoints retain their configured Bearer authentication.
 
 ## [0.7.2] - 2026-11-15

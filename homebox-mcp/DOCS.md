@@ -245,7 +245,7 @@ hostname from the **Info** tab (`<repository-id>-homebox-mcp`):
 external_hostname: ""
 additional_hosts:
   - hostname: homebox-mcp.yourdomain.com
-    service: http://ee45feb1-homebox-mcp:8099
+    service: http://140cc115-homebox-mcp:8099
 ```
 
 #### 3. Authorize the tunnel

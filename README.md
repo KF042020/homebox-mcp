@@ -5,12 +5,17 @@
 ![Supports amd64 Architecture][amd64-shield]
 
 A Home Assistant add-on that runs an [MCP](https://modelcontextprotocol.io/) server for
-[Homebox](https://homebox.software/), so an AI assistant such as Claude can list, search,
-create, move and update the things in your home inventory.
+[Homebox](https://homebox.software/), allowing AI assistants to list, search, create, move and
+update your home inventory.
 
-This is a maintained fork. It runs against current Homebox (v0.26+) and includes complete,
-tested instructions for connecting it to **Claude.ai** through a Cloudflare Tunnel. See
-[History](#history-and-credits) for where the code comes from.
+This fork adds native **Home Assistant MCP discovery**: Home Assistant Core 2026.10+ can securely
+discover the add-on through Supervisor and pass its Bearer token to the built-in MCP integration.
+The tools can then be selected by Home Assistant conversation agents such as **OpenAI Conversation
+and Google Gemini**, including voice assistants using Assist. Claude.ai and other external clients
+remain supported through the documented Cloudflare Tunnel setup.
+
+This repository is based on [beausmith/homebox-mcp](https://github.com/beausmith/homebox-mcp),
+which maintains compatibility with Homebox v0.26+. See [History](#history-and-credits) for credits.
 
 🇧🇷 The Portuguese files (`README-pt-br.md`, `homebox-mcp/DOCS-pt-br.md`) are upstream's and
 have not been updated for this fork.
@@ -22,6 +27,7 @@ have not been updated for this fork.
 - [1. Install the add-on](#1-install-the-add-on)
 - [2. Configure it](#2-configure-it)
 - [3. Check that it works](#3-check-that-it-works)
+- [Native Home Assistant integration](#native-home-assistant-integration-core-202610)
 - [4. Expose it to the internet](#4-expose-it-to-the-internet)
 - [5. Lock it down](#5-lock-it-down)
 - [6. Connect Claude.ai](#6-connect-claudeai)
@@ -75,12 +81,12 @@ Cloudflare. If you only use Claude Desktop or Claude Code from your LAN, you can
 
 ## 1. Install the add-on
 
-[![Open the Homebox MCP Server add-on page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=homebox-mcp&repository_url=https%3A%2F%2Fgithub.com%2Fbeausmith%2Fhomebox-mcp)
+[![Open the Homebox MCP Server add-on page](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=homebox-mcp&repository_url=https%3A%2F%2Fgithub.com%2FKF042020%2Fhomebox-mcp)
 
 <details>
 <summary>Manual install</summary>
 
-1. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, add `https://github.com/beausmith/homebox-mcp`
+1. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, add `https://github.com/KF042020/homebox-mcp`
 2. Find **Homebox MCP Server** in the store and click **Install**. Supervisor builds the image
    locally; this takes a minute or two.
 
@@ -135,6 +141,26 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST http://homeassistant.local:8099
 `200` means the server is up and the token is accepted. `401` means the token is wrong or missing.
 The [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) gives a full interactive
 test: `npx @modelcontextprotocol/inspector --server-url http://homeassistant.local:8099/mcp --transport http`.
+
+## Native Home Assistant integration (Core 2026.10+)
+
+On Home Assistant Core **2026.10 or newer**, the add-on registers itself with the built-in
+**Model Context Protocol (MCP)** integration through Supervisor when it starts. This uses the
+configured `mcp_auth_token` as a protected Bearer credential; the token is not put in the URL or
+written to the add-on log. Keep both `mcp_auth_enabled: true` and a non-empty `mcp_auth_token`.
+No Cloudflare Tunnel, public hostname, or port forwarding is needed for OpenAI Conversation or
+Google Gemini running inside Home Assistant.
+
+1. Start or restart this add-on. In Home Assistant, open **Settings → Devices & services** and
+   accept the discovered **Homebox Inventory** MCP server.
+2. Open the conversation-agent configuration for **OpenAI Conversation** or **Google Gemini**.
+3. In its conversation settings, find **Home Assistant API** and select **Homebox Inventory**.
+4. Save the agent. It can now call the Homebox tools. To use it by voice, select that conversation
+   agent in the Assist pipeline assigned to your Atom Echo.
+
+The MCP integration lists the tools from this server and refreshes them periodically. If the
+server is not discovered, check that Core is 2026.10+, `mcp_auth_enabled` is on, and the token is
+configured. Restarting the add-on sends the discovery announcement again.
 
 ## 4. Expose it to the internet
 

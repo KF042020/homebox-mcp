@@ -17,6 +17,10 @@ remain supported through the documented Cloudflare Tunnel setup.
 This repository is based on [beausmith/homebox-mcp](https://github.com/beausmith/homebox-mcp),
 which maintains compatibility with Homebox v0.26+. See [History](#history-and-credits) for credits.
 
+**Prebuilt Docker images are published to GitHub Container Registry (GHCR)** for `amd64` and
+`aarch64`. Home Assistant pulls the versioned image; it does not build the container on your
+Home Assistant host.
+
 🇧🇷 The Portuguese files (`README-pt-br.md`, `homebox-mcp/DOCS-pt-br.md`) are upstream's and
 have not been updated for this fork.
 
@@ -98,6 +102,18 @@ existing add-on (`homebox_url`, `homebox_token`, `mcp_auth_enabled`, `mcp_auth_t
 `log_level`) into this one. Then **stop** the beausmith add-on before starting this one, because
 both use host port 8099. Keep the old add-on installed until the new one has passed its tests; this
 gives you an easy rollback path.
+
+### GHCR package visibility
+
+The first successful publish creates these packages:
+
+- [homebox-mcp-amd64](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp-amd64)
+- [homebox-mcp-aarch64](https://github.com/KF042020/homebox-mcp/pkgs/container/homebox-mcp-aarch64)
+
+GitHub Container Registry packages may start as **Private**. After the first successful Actions
+publish, open each package → **Package settings** → **Change visibility** → **Public**. The
+Home Assistant host must be able to pull the images anonymously; do not put any registry password
+or GitHub token into the add-on configuration.
 
 ## 2. Configure it
 
